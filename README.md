@@ -26,6 +26,7 @@
 - [Environment Variables](#-environment-variables)
 - [API Endpoints](#-api-endpoints)
 - [Architecture Decisions](#-architecture-decisions)
+- [Database Migrations](#-database-migrations)
 - [Available Scripts](#-available-scripts)
 
 ---
@@ -371,17 +372,76 @@ Roles are enforced at the **controller level** using the `@GetUser()` decorator.
 
 ---
 
+## 🗃️ Database Migrations
+
+This project uses **TypeORM migrations** for safe, version-controlled schema changes. Migration scripts are wired to `src/config/typeorm.config.ts` which exports a `DataSource` instance.
+
+> ⚠️ Keep `DB_SYNCHRONIZE=false` in all non-development environments and rely on migrations instead.
+
+### Migration Commands
+
+```bash
+# Generate a new migration by diffing entities vs the current DB schema
+npm run typeorm:generate --name=MigrationName
+# Output: src/database/migrations/<timestamp>-MigrationName.ts
+
+# Run all pending migrations
+npm run typeorm:run
+
+# Revert the last applied migration
+npm run typeorm:revert
+```
+
+### How It Works
+
+| Script              | Command                                            | Purpose                                      |
+| ------------------- | -------------------------------------------------- | -------------------------------------------- |
+| `typeorm`           | `ts-node` + TypeORM CLI via `typeorm.config.ts`    | Base alias used by other typeorm scripts     |
+| `typeorm:generate`  | `migration:generate ./src/database/migrations/%name%` | Auto-generates migration from entity diff |
+| `typeorm:run`       | `migration:run`                                    | Applies all pending migrations               |
+| `typeorm:revert`    | `migration:revert`                                 | Rolls back the last migration                |
+
+### Workflow Example
+
+```bash
+# 1. Make changes to an entity file
+# 2. Generate the migration
+npm run typeorm:generate --name=AddPhoneToUser
+
+# 3. Review the generated file in src/database/migrations/
+# 4. Apply it
+npm run typeorm:run
+```
+
+> Migration files are saved to `src/database/migrations/` and picked up automatically by the TypeORM config glob pattern.
+
+---
+
 ## 📜 Available Scripts
 
 ```bash
-npm run start:dev     # Start with hot-reload (development)
-npm run start:prod    # Start compiled production build
-npm run build         # Compile TypeScript to dist/
+# Development
+npm run start:dev     # Start with hot-reload
+npm run start:debug   # Start in debug mode with hot-reload
+npm run start:prod    # Run compiled production build
+
+# Build
+npm run build         # Compile TypeScript → dist/
+
+# Code Quality
 npm run lint          # Run ESLint with auto-fix
 npm run format        # Run Prettier on src/ and test/
+
+# Testing
 npm run test          # Run unit tests
-npm run test:cov      # Run tests with coverage report
-npm run test:e2e      # Run end-to-end tests
+npm run test:watch    # Watch mode
+npm run test:cov      # With coverage report
+npm run test:e2e      # End-to-end tests
+
+# Database Migrations
+npm run typeorm:generate --name=MigrationName   # Generate from entity diff
+npm run typeorm:run                              # Apply pending migrations
+npm run typeorm:revert                           # Roll back last migration
 ```
 
 ---
