@@ -46,6 +46,7 @@ Clone it, configure your `.env`, and start building your domain logic immediatel
 - **Cookie-based JWT Authentication** — Secure `HttpOnly` cookies with 7-day expiry
 - **Auth Middleware** — Centrally protects all routes; public routes are explicitly excluded via `exclude()` in `AppModule`
 - **Password Hashing** — `bcryptjs` with salt rounds of 10
+- **HTTP Headers Protection** — Globally secured against standard web vulnerabilities via `helmet`
 - **Role-Based Access Control (RBAC)** — `USER`, `ADMIN`, `SUPER_ADMIN` roles enforced at the controller level
 - **Admin Protection** — Admin/Super-Admin accounts cannot be created via the public register endpoint; existing admin accounts cannot be modified by regular users
 
@@ -80,8 +81,20 @@ Every entity that extends `CommonFields` automatically gets:
 
 ### 🛡️ Rate Limiting
 
-- **Throttler Guard** — Global rate limiting via `@nestjs/throttler` (500 requests / 6 seconds per IP)
+- **Throttler Guard** — Global rate limiting via `@nestjs/throttler` (100 requests / 60 seconds per IP)
 - Applied automatically via `APP_GUARD` — no per-route decoration needed
+
+### 🏥 Health Checks
+
+- **Terminus Integration** — Exposes `/api/health` endpoint to monitor application runtime status
+- **Database Tracking** — Continuously verifies active PostgreSQL connectivity
+- **Memory Guardrails** — Enforces monitoring thresholds alerting if OS RSS or V8 Heap allocations exceed 150MB
+
+### 📝 Production Logging
+
+- **Winston Setup** — Fully overrides the default internal NestJS logger with the robust Winston engine
+- **Log Rotation** — Automatically archives logs daily into a dedicated `logs/` folder, capping retention at 14 days with memory size limits
+- **Isolated Error Streams** — Dedicated tracing file exclusively for capturing system errors
 
 ### 📦 Response Normalization
 
