@@ -10,6 +10,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { AuthMiddleware } from './app/auth/auth.middleware';
 import { AuthModule } from './app/auth/auth.module';
+import { HealthModule } from './app/health/health.module';
 import { MediaModule } from './app/media/media.module';
 import { User } from './app/user/entities/user.entity';
 import { UserModule } from './app/user/user.module';
@@ -32,6 +33,7 @@ import { PageTransferResponseInterceptor } from './interceptors/response.interce
     AuthModule,
     UserModule,
     MediaModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [PageTransferResponseInterceptor],
