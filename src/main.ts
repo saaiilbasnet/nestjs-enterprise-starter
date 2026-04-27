@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { config } from 'dotenv';
 import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
@@ -19,6 +20,7 @@ async function bootstrap() {
   });
   // app.useGlobalFilters(new CatchAllExceptionFilter());
   app.setGlobalPrefix('api');
+  app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
     origin: ['http://localhost:3000', 'http://localhost:5173'],
