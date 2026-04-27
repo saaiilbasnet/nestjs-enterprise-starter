@@ -1,18 +1,22 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
+import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
 // import { CatchAllExceptionFilter } from './common/http-error.filter';
 import { env } from './config/env';
+import { winstonConfig } from './config/logger.config';
 import { AllExceptionsFilter } from './interceptors/exceptionFilter';
 import { PageTransferResponseInterceptor } from './interceptors/response.interceptor';
 
 config();
 const PORT = env.PORT;
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(winstonConfig),
+  });
   // app.useGlobalFilters(new CatchAllExceptionFilter());
   app.setGlobalPrefix('api');
   app.use(cookieParser());
@@ -51,5 +55,8 @@ async function bootstrap() {
   await app.listen(PORT ?? 9095);
 }
 void bootstrap().then((): void => {
-  console.log(`|--------Server is running on port ${PORT}--------|`);
+  Logger.log(
+    `|--------Server is running on port ${PORT}--------|`,
+    'Bootstrap',
+  );
 });
