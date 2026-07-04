@@ -3,7 +3,6 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import {
   HealthCheck,
   HealthCheckService,
-  HttpHealthIndicator,
   TypeOrmHealthIndicator,
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
@@ -13,7 +12,6 @@ import {
 export class HealthController {
   constructor(
     private health: HealthCheckService,
-    private http: HttpHealthIndicator,
     private db: TypeOrmHealthIndicator,
     private memory: MemoryHealthIndicator,
   ) {}

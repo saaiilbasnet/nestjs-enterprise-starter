@@ -13,18 +13,18 @@ export class PaginationDto {
   @Transform(transformToNum)
   @IsNumber()
   @IsOptional()
-  page: number;
+  page!: number;
 
   @ApiPropertyOptional({ default: 10 })
   @Transform(transformToNum)
   @IsNumber()
   @IsOptional()
-  take: number;
+  take!: number;
 
   @IsString()
   @IsOptional()
   @ApiPropertyOptional({ default: 'some name' })
-  searchTerm: string;
+  searchTerm!: string;
 }
 
 export class SearchTermDTO {
@@ -43,7 +43,7 @@ export class PaginationDTO {
   })
   @Type(() => Number)
   @IsPositive()
-  page: number;
+  page!: number;
 
   @ApiProperty({
     default: 10,
@@ -52,7 +52,7 @@ export class PaginationDTO {
   })
   @Type(() => Number)
   @IsPositive()
-  take: number;
+  take!: number;
 }
 
 export class OptionalPagination extends PartialType(PaginationDTO) {}
@@ -70,7 +70,7 @@ export class optionalPagiSearchTermDTO extends IntersectionType(
 export class IdDTO {
   @ApiProperty({ example: 1, description: 'Positive Number ' })
   @IsOptional()
-  id: string;
+  id!: string;
 }
 export class OptionalIdDTO {
   @ApiPropertyOptional({ example: '1', description: 'Positive Number ' })
