@@ -4,40 +4,43 @@ import { MediaController } from './media.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { extname } from 'path';
+import { randomUUID } from 'crypto';
 import { Media } from './media.entity';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          limit: 500,
-          ttl: 6,
-        },
-      ],
-    }),
     TypeOrmModule.forFeature([Media]),
     MulterModule.register({
       storage: diskStorage({
         destination: './uploads',
         filename: (_, file, cb) => {
-          const filename = `${Date.now()}-${file.originalname}`;
-          cb(null, filename);
+          const ext = extname(file.originalname).toLowerCase();
+          const safeName = `${randomUUID()}${ext}`;
+          cb(null, safeName);
         },
       }),
       limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowedMimes = [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Unsupported file type'), false);
+        }
+      },
     }),
   ],
   controllers: [MediaController],
-  providers: [
-    MediaService,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
+  providers: [MediaService],
   exports: [MediaService],
 })
 export class MediaModule {}

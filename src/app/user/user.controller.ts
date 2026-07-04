@@ -6,40 +6,30 @@ import {
   Param,
   Patch,
   Query,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserService } from './user.service';
 
 import { GetUser } from 'src/decorators/get-user.decorator';
 import { UserRoleENUM } from './user.type';
+import { Roles, RolesGuard } from 'src/common/guards/roles.guard';
 
 import { ApiQuery } from '@nestjs/swagger';
 import type { LoggedInUser } from './user.type';
 import { RoleDto } from './dto/role-user.dto';
 
 @Controller('user')
+@UseGuards(RolesGuard)
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
   @ApiQuery({ name: 'role', required: false })
   @Get('all')
-  async findAll(@GetUser() user: LoggedInUser, @Query() RoleDto?: RoleDto) {
-    if (
-      user.role === UserRoleENUM.ADMIN ||
-      user.role === UserRoleENUM.SUPER_ADMIN
-    )
-      return this.usersService.findAll(RoleDto);
-    else
-      throw new UnauthorizedException(
-        'Unauthorised: No permission for this route.',
-      );
+  @Roles(UserRoleENUM.ADMIN, UserRoleENUM.SUPER_ADMIN)
+  async findAll(@Query() roleDto?: RoleDto) {
+    return this.usersService.findAll(roleDto);
   }
-
-  // @Get()
-  // findAll(@Query() filter: UserFilterDTO) {
-  //   return this.usersService.findAll(filter);
-  // }
 
   @Get('profile')
   getProfile(@GetUser() user: LoggedInUser) {
@@ -53,7 +43,7 @@ export class UserController {
       user.role === UserRoleENUM.SUPER_ADMIN
     )
       return this.usersService.findById(id);
-    else return this.usersService.findById(user.id);
+    return this.usersService.findById(user.id);
   }
 
   @Patch(':id')
@@ -67,18 +57,12 @@ export class UserController {
       user.role === UserRoleENUM.SUPER_ADMIN
     )
       return this.usersService.update(id, updateDetails);
-    else return this.usersService.update(user.id, updateDetails);
+    return this.usersService.update(user.id, updateDetails);
   }
 
   @Delete(':id')
-  deleteById(@Param('id') id: string, @GetUser() user: LoggedInUser) {
-    if (
-      user.role === UserRoleENUM.ADMIN ||
-      user.role === UserRoleENUM.SUPER_ADMIN
-    )
-      return this.usersService.deleteById(id);
-    throw new UnauthorizedException(
-      'Unauthorised: No permission for this route.',
-    );
+  @Roles(UserRoleENUM.ADMIN, UserRoleENUM.SUPER_ADMIN)
+  deleteById(@Param('id') id: string) {
+    return this.usersService.deleteById(id);
   }
 }

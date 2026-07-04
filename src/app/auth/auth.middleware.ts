@@ -3,12 +3,11 @@ import {
   NestMiddleware,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NextFunction, Response } from 'express';
-import * as jwt from 'jsonwebtoken';
 import { User } from 'src/app/user/entities/user.entity';
 import { RequestWithUser } from 'src/config/customRequest';
-import { env } from 'src/config/env';
 import { JwtPayload } from 'src/interface/jwt.interface';
 import { Repository } from 'typeorm';
 
@@ -16,7 +15,8 @@ import { Repository } from 'typeorm';
 export class AuthMiddleware implements NestMiddleware {
   constructor(
     @InjectRepository(User)
-    private readonly userEntity: Repository<User>,
+    private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
   async use(req: RequestWithUser, _res: Response, next: NextFunction) {
@@ -24,13 +24,18 @@ export class AuthMiddleware implements NestMiddleware {
     if (!token)
       throw new UnauthorizedException('Unauthorized: Please login to continue');
 
-    const decoded = jwt.verify(token, env.JWT_SECRET!) as unknown as JwtPayload;
+    let decoded: JwtPayload;
+    try {
+      decoded = this.jwtService.verify<JwtPayload>(token);
+    } catch {
+      throw new UnauthorizedException('Unauthorized: Invalid or expired token');
+    }
 
     if (!decoded?.userId) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    const user = await this.userEntity.findOne({
+    const user = await this.userRepository.findOne({
       where: { id: decoded.userId },
       select: ['id', 'fullname', 'email', 'role'],
     });

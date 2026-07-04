@@ -14,38 +14,37 @@ import { AuthMiddleware } from './app/auth/auth.middleware';
 import { AuthModule } from './app/auth/auth.module';
 import { HealthModule } from './app/health/health.module';
 import { MediaModule } from './app/media/media.module';
-import { User } from './app/user/entities/user.entity';
 import { UserModule } from './app/user/user.module';
 import { typeOrmConfigs } from './config/db-config';
-import { PageTransferResponseInterceptor } from './interceptors/response.interceptor';
 
 @Module({
   imports: [
-    // SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
     TypeOrmModule.forRoot(typeOrmConfigs()),
-    TypeOrmModule.forFeature([User]),
     ServeStaticModule.forRoot({
-      serveStaticOptions: {},
-      rootPath: join(__dirname, '..'),
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+      serveStaticOptions: {
+        index: false,
+        dotfiles: 'deny',
+      },
     }),
-    AuthModule,
-    UserModule,
-    MediaModule,
-    HealthModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
         limit: 100,
       },
     ]),
+    AuthModule,
+    UserModule,
+    MediaModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [
-    PageTransferResponseInterceptor,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
@@ -69,7 +68,11 @@ export class AppModule implements NestModule {
           path: 'auth/logout',
           method: RequestMethod.POST,
         },
+        {
+          path: 'health',
+          method: RequestMethod.GET,
+        },
       )
-      .forRoutes('*');
+      .forRoutes('*path');
   }
 }

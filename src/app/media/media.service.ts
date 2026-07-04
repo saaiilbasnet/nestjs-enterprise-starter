@@ -1,8 +1,15 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MediaTypeEnum } from 'src/common/common.enum';
-import { DeepPartial, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Media } from '../media/media.entity';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class MediaService {
@@ -14,105 +21,82 @@ export class MediaService {
   async findOrFail(id: string) {
     const media = await this.mediaRepository.findOne({ where: { id } });
     if (!media) {
-      throw new HttpException(['Media not found'], HttpStatus.NOT_FOUND);
+      throw new NotFoundException('Media not found');
     }
     return media;
   }
 
   async handleFileUpload(file: Express.Multer.File) {
-    let type: MediaTypeEnum;
+    const type = this.resolveMediaType(file.mimetype);
 
-    if (file.mimetype.startsWith('image/')) {
-      type = MediaTypeEnum.IMAGE;
-    } else if (file.mimetype === 'application/pdf') {
-      type = MediaTypeEnum.PDF;
-    } else if (
-      file.mimetype === 'application/msword' ||
-      file.mimetype ===
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ) {
-      type = MediaTypeEnum.DOCUMENT;
-    } else {
-      throw new HttpException(
-        [
-          'Unsupported file format! Only images, PDFs, and Word documents are allowed.',
-        ],
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     const media = this.mediaRepository.create({
-      type: type,
+      type,
       url: `/uploads/${file.filename}`,
     });
 
     await this.mediaRepository.save(media);
-    delete media.deletedAt;
 
-    return { message: 'File uploaded successfully', data: media };
+    return {
+      message: 'File uploaded successfully',
+      data: { id: media.id, type: media.type, url: media.url },
+    };
   }
 
   async handleMultipleFileUpload(files: Array<Express.Multer.File>) {
-    const uploadedMedia: DeepPartial<Media>[] = [];
-
-    for (const file of files) {
-      let type: MediaTypeEnum;
-
-      if (file.mimetype.startsWith('image/')) {
-        type = MediaTypeEnum.IMAGE;
-      } else if (file.mimetype === 'application/pdf') {
-        type = MediaTypeEnum.PDF;
-      } else if (
-        file.mimetype === 'application/msword' ||
-        file.mimetype ===
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ) {
-        type = MediaTypeEnum.DOCUMENT;
-      } else {
-        throw new HttpException(
-          [
-            'Unsupported file format! Only images, PDFs, and Word documents are allowed.',
-          ],
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      uploadedMedia.push({
+    const mediaEntities = files.map((file) => {
+      const type = this.resolveMediaType(file.mimetype);
+      return this.mediaRepository.create({
         type,
-        url: `/public/uploads/${file.filename}`,
+        url: `/uploads/${file.filename}`,
       });
-    }
+    });
 
-    // Save all media in a single DB operation
-    const data = await this.mediaRepository.save(uploadedMedia);
+    const data = await this.mediaRepository.save(mediaEntities);
 
     return { message: 'Files uploaded successfully', data };
   }
 
-  removeMedia(id: number) {
-    return `This action removes a #${id} media`;
+  async removeMedia(id: string) {
+    const media = await this.findOrFail(id);
+
+    const filePath = path.join(process.cwd(), media.url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    await this.mediaRepository.softDelete(media.id);
+    return { message: 'Media deleted successfully', success: true };
   }
 
-  async getByIds(ids: number[], failOn404: boolean = false) {
+  async getByIds(ids: string[], failOn404: boolean = false) {
     const existingData = await this.mediaRepository.find({
       where: {
         id: In(ids),
       },
     });
     if (existingData.length !== ids.length && failOn404) {
-      throw new HttpException(
-        ['One or more media not found'],
-        HttpStatus.NOT_FOUND,
-      );
+      throw new NotFoundException('One or more media not found');
     }
     return existingData;
   }
 
   async getById(id: string) {
-    const mediaInfo = await this.mediaRepository.findOne({
-      where: {
-        id,
-      },
-    });
-    return mediaInfo;
+    return this.findOrFail(id);
+  }
+
+  private resolveMediaType(mimetype: string): MediaTypeEnum {
+    if (mimetype.startsWith('image/')) return MediaTypeEnum.IMAGE;
+    if (mimetype === 'application/pdf') return MediaTypeEnum.PDF;
+    if (
+      mimetype === 'application/msword' ||
+      mimetype ===
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+      return MediaTypeEnum.DOCUMENT;
+
+    throw new HttpException(
+      'Unsupported file format! Only images, PDFs, and Word documents are allowed.',
+      HttpStatus.BAD_REQUEST,
+    );
   }
 }

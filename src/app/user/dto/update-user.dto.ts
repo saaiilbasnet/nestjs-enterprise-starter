@@ -1,17 +1,30 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsString } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { UserRoleENUM } from '../user.type';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({ example: 'Full Name' })
+  @IsOptional()
   @IsString()
-  fullname!: string;
+  @MinLength(2)
+  @MaxLength(100)
+  fullname?: string;
 
   @ApiPropertyOptional({ example: 'example@gmail.com' })
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  @MaxLength(255)
+  email?: string;
 
   @ApiPropertyOptional({ example: UserRoleENUM.USER })
+  @IsOptional()
   @IsEnum(UserRoleENUM, {
     message: 'Valid role required.',
   })

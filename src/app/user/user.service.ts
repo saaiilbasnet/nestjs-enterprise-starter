@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { RoleDto } from './dto/role-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -14,39 +14,20 @@ import { LoggedInUser, UserRoleENUM } from './user.type';
 export class UserService {
   constructor(
     @InjectRepository(User)
-    private readonly userEntity: Repository<User>,
-    private readonly entityManager: EntityManager,
-
-    // @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly userRepository: Repository<User>,
   ) {}
 
-  async findAll(RoleDto?: RoleDto) {
-    const users = await this.userEntity.findAndCount({
-      where: RoleDto ? { role: RoleDto.role } : {},
+  async findAll(roleDto?: RoleDto) {
+    const users = await this.userRepository.findAndCount({
+      where: roleDto?.role ? { role: roleDto.role } : {},
       select: ['id', 'createdAt', 'fullname', 'email', 'role'],
+      order: { createdAt: 'DESC' },
     });
     return users;
   }
 
-  // async findAll(filter: UserFilterDTO) {
-  //   const { searchTerm, ...query } = filter;
-  //   const where: FindOptionsWhere<User> = {};
-  //   const { take, skip } = generateTakeSkip(query);
-  //   if (searchTerm) where.fullname = ILike(`%${searchTerm}%`);
-  //   const users = await this.userEntity.findAndCount({
-  //     where,
-  //     take,
-  //     skip,
-  //     select: ['id', 'createdAt', 'fullname', 'email', 'role'],
-  //     order: {
-  //       createdAt: 'DESC',
-  //     },
-  //   });
-  //   return users;
-  // }
-
   async findById(id: string) {
-    const user = await this.userEntity.findOne({
+    const user = await this.userRepository.findOne({
       where: { id },
       select: ['id', 'createdAt', 'fullname', 'email', 'role'],
     });
@@ -64,13 +45,12 @@ export class UserService {
   }
 
   async update(id: string, updateDetails: UpdateUserDto) {
-    const userData = await this.userEntity.findOne({ where: { id } });
+    const userData = await this.userRepository.findOne({ where: { id } });
 
     if (!userData) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
 
-    // Block any attempt to set role to ADMIN or SUPER_ADMIN
     if (
       updateDetails.role === UserRoleENUM.ADMIN ||
       updateDetails.role === UserRoleENUM.SUPER_ADMIN
@@ -80,36 +60,29 @@ export class UserService {
       );
     }
 
-    // Prevent modifying an admin or super admin account (and don't update their role)
     if (
       userData.role === UserRoleENUM.ADMIN ||
       userData.role === UserRoleENUM.SUPER_ADMIN
     ) {
-      // remove role from updateDetails so it never updates
-      if ('role' in updateDetails) {
-        delete updateDetails.role;
-      }
-
       throw new UnauthorizedException(
         'Unauthorised: Admin or Super Admin account cannot be modified.',
       );
     }
 
-    this.userEntity.merge(userData, updateDetails);
-    await this.entityManager.save(userData);
+    this.userRepository.merge(userData, updateDetails);
+    await this.userRepository.save(userData);
 
     return {
       message: 'User details updated successfully',
       success: true,
-      updateDetails,
     };
   }
 
   async deleteById(id: string) {
-    const user = await this.userEntity.findOneBy({ id });
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException(`User with id ${id} not found`);
 
-    void this.userEntity.softDelete(user.id);
+    await this.userRepository.softDelete(user.id);
     return {
       message: `User: ${id} Deleted Successfully`,
       success: true,
